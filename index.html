@@ -1,81 +1,176 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <title>С Днём матери!</title>
-  <script src="https://cdn.jsdelivr.net/npm/p5@1.9.2/lib/p5.min.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Yeseva+One&display=swap" rel="stylesheet">
-  <style>
-    body{
-      margin:0;display:flex;justify-content:center;align-items:center;
-      height:100vh;background:#fff5f8;
-    }
-    canvas{
-      border-radius:24px;box-shadow:0 8px 32px rgba(0,0,0,.2);
-    }
-  </style>
+<meta charset="UTF-8" />
+<title>С Днём матери!</title>
+
+<!-- p5.js -->
+<script src="https://cdn.jsdelivr.net/npm/p5@1.9.2/lib/p5.min.js"></script>
+
+<!-- Шрифт -->
+<link href="https://fonts.googleapis.com/css2?family=Yeseva+One&display=swap" rel="stylesheet">
+
+<style>
+  body{
+    margin:0;display:flex;justify-content:center;align-items:center;
+    height:100vh;background:#fff5f8;overflow:hidden;
+  }
+  canvas{
+    border-radius:24px;box-shadow:0 8px 32px rgba(0,0,0,.2);
+  }
+  /* кнопка — центр по горизонтали, внизу */
+  #surprise{
+    position:absolute;left:50%;bottom:18px;transform:translateX(-50%);
+    padding:10px 22px;border:none;border-radius:24px;
+    background:#ff5fa2;color:#fff;font-size:20px;
+    font-family:'Yeseva One',cursive;cursor:pointer;
+    box-shadow:0 4px 10px rgba(0,0,0,.15);
+    transition:transform .15s;
+  }
+  #surprise:hover{transform:translateX(-50%) scale(1.06);}
+</style>
 </head>
+
 <body>
+<button id="surprise">Нажми 💝</button>
+
 <script>
+/* ───── глобальные переменные ───── */
 let t = 0;
 let momImg;
 
-function preload(){                 // загружаем фото перед стартом
-  momImg = loadImage('mom.JPG');    // поменяй имя, если файл называется иначе
-}
+const minis   = [];   // гирлянда маленьких сердечек
+let bursts    = [];   // фейерверки после клика
+let fallText  = [];   // падающие строки «Я люблю тебя»
 
+/* ───── preload ───── */
+function preload(){ momImg = loadImage('mom.JPG'); }
+
+/* ───── setup ───── */
 function setup(){
   createCanvas(600,600);
   textAlign(CENTER,CENTER);
+  colorMode(HSB,360,100,100,100);
+
+  /* верхние маленькие сердечки */
+  for(let i=0;i<25;i++){
+    minis.push({x:random(60,width-60),y:random(40,180),
+                base:random(9,14),phase:random(TWO_PI),
+                speed:random(1.5,2.5)});
+  }
+
+  /* кнопка-сюрприз */
+  document.getElementById('surprise').onclick = triggerFirework;
 }
 
-/* путь классического сердечка — используем и для клипа, и для обводки */
-function heartPath(ctx, s){
+/* ───── path сердца ───── */
+function heartPath(ctx,s){
   ctx.beginPath();
-  for(let a=0;a<TWO_PI;a+=0.02){
-    const x = 16*Math.pow(Math.sin(a),3) * s;
-    const y = -(13*Math.cos(a) - 5*Math.cos(2*a) - 2*Math.cos(3*a) - Math.cos(4*a)) * s;
-    ctx.lineTo(x, y);
+  for(let a=0;a<TWO_PI;a+=0.03){
+    const x = 16*pow(sin(a),3)*s;
+    const y = -(13*cos(a)-5*cos(2*a)-2*cos(3*a)-cos(4*a))*s;
+    ctx.lineTo(x,y);
   }
   ctx.closePath();
 }
 
+/* ───── гирлянда маленьких сердечек ───── */
+function drawMiniHearts(){
+  const ctx=drawingContext;
+  minis.forEach(h=>{
+    const sz = h.base*(1+0.24*sin(t*h.speed+h.phase));
+    fill((t*80+h.phase*180/PI)%360,70,100);
+    noStroke();
+    ctx.save();ctx.translate(h.x,h.y);heartPath(ctx,sz/16);ctx.fill();ctx.restore();
+  });
+}
+
+/* ───── падающие надписи «Я люблю тебя» ───── */
+function spawnLove(){
+  fallText.push({
+    x: random(80,width-80),
+    y: -20,
+    vy: random(0.6,1.2),
+    alpha: 100
+  });
+}
+
+function updateLove(){
+  textFont('Yeseva One'); textSize(22);
+  for(let i=fallText.length-1;i>=0;i--){
+    const f = fallText[i];
+    f.y += f.vy;
+    f.alpha -= 0.3;
+    if(f.alpha<=0){ fallText.splice(i,1); continue; }
+    fill(340,60,100,f.alpha);
+    text('Я люблю тебя', f.x, f.y);
+  }
+  /* каждые ~120 кадров (≈2 сек) создаём новую строку */
+  if(frameCount%120===0) spawnLove();
+}
+
+/* ───── фейерверк сердечек ───── */
+function triggerFirework(){
+  const p=[];const n=60;
+  for(let i=0;i<n;i++){
+    const a=random(TWO_PI);
+    p.push({x:width/2,y:height/2-80,
+            vx:cos(a)*random(1.5,4),
+            vy:sin(a)*random(1.5,4),
+            life:1});
+  }
+  bursts.push(p);
+}
+
+function updateBursts(){
+  const ctx=drawingContext;
+  bursts.forEach(ps=>{
+    ps.forEach(p=>{
+      p.x+=p.vx; p.y+=p.vy; p.vy+=0.03; p.life-=0.015;
+      if(p.life>0){
+        ctx.save();ctx.translate(p.x,p.y);
+        fill((t*90+p.x)%360,80,100,p.life*100);
+        noStroke();heartPath(ctx,6/16);ctx.fill();ctx.restore();
+      }
+    });
+  });
+  bursts=bursts.filter(b=>b.some(p=>p.life>0));
+}
+
+/* ───── основной draw ───── */
 function draw(){
   background('#fff5f8');
-  
-  const ctx = drawingContext;
-  const pulse = 1 + 0.05 * Math.sin(t*3);
-  const scaleH = 9.5 * pulse;          // «размер» сердечка
-  
-  push();
-  translate(width/2, height/2 - 80);   // чуть выше центра
-  
-  /* ---------- клип и изображение ---------- */
-  ctx.save();                          // сохраняем состояние канвы
-  heartPath(ctx, scaleH);              // рисуем контур
-  ctx.clip();                          // всё дальше — внутри сердца
-  
-  // рисуем фото, подстраивая его под ширину сердца (~32 * scaleH px)
-  const w = scaleH * 32;
-  imageMode(CENTER);
-  image(momImg, 0, 0, w, w);           // квадратной обрезки обычно хватает
-  ctx.restore();                       // возвращаем обычный режим
-  
-  /* ---------- обводка сердца ---------- */
-  noFill();
-  strokeWeight(4);
-  stroke(lerpColor(color('#ff5fa2'), color('#ffbf00'), (Math.sin(t)+1)/2));
-  beginShape();
-  heartPath(ctx, scaleH);              // используем тот же путь
-  endShape();
-  pop();
-  
-  /* ---------- подпись ---------- */
-  fill('#d81b60'); noStroke();
-  textFont('Yeseva One'); textSize(26);
+  drawMiniHearts();      // гирлянда
+  updateLove();          // падающие надписи
+
+  const ctx=drawingContext;
+  const pulse=1+0.05*sin(t*3), size=9.5*pulse;
+
+  /* розовое свечение */
+  push();translate(width/2,height/2-80);
+  for(let i=8;i>0;i--){
+    fill(340,60,100,map(i,1,8,5,25));
+    noStroke();ctx.save();heartPath(ctx,size+i*0.2);ctx.fill();ctx.restore();
+  }pop();
+
+  /* фото-сердце */
+  push();translate(width/2,height/2-80);
+  ctx.save();heartPath(ctx,size);ctx.clip();
+  imageMode(CENTER);image(momImg,0,0,size*32,size*32);ctx.restore();pop();
+
+  /* радужная окантовка */
+  push();translate(width/2,height/2-80);
+  stroke((t*80)%360,80,100);strokeWeight(4);noFill();
+  beginShape();heartPath(ctx,size);endShape();pop();
+
+  /* подпись */
+  fill('#d81b60');noStroke();
+  textFont('Yeseva One');textSize(26);
   text('С Днём матери,\nмамочка!\nЯ тебя люблю 💖\nЭто сердечко для тебя от Муси',
-       width/2, height/2 + 160);
-  
+       width/2,height/2+160);
+
+  updateBursts();  // фейерверки
+
   t += 0.02;
 }
 </script>
