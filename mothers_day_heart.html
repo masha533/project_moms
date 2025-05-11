@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>С Днём матери!</title>
+  <script src="https://cdn.jsdelivr.net/npm/p5@1.9.2/lib/p5.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Yeseva+One&display=swap" rel="stylesheet">
+  <style>
+    body{
+      margin:0;display:flex;justify-content:center;align-items:center;
+      height:100vh;background:#fff5f8;
+    }
+    canvas{
+      border-radius:24px;box-shadow:0 8px 32px rgba(0,0,0,.2);
+    }
+  </style>
+</head>
+<body>
+<script>
+let t = 0;
+let momImg;
+
+function preload(){                 // загружаем фото перед стартом
+  momImg = loadImage('mom.JPG');    // поменяй имя, если файл называется иначе
+}
+
+function setup(){
+  createCanvas(600,600);
+  textAlign(CENTER,CENTER);
+}
+
+/* путь классического сердечка — используем и для клипа, и для обводки */
+function heartPath(ctx, s){
+  ctx.beginPath();
+  for(let a=0;a<TWO_PI;a+=0.02){
+    const x = 16*Math.pow(Math.sin(a),3) * s;
+    const y = -(13*Math.cos(a) - 5*Math.cos(2*a) - 2*Math.cos(3*a) - Math.cos(4*a)) * s;
+    ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+}
+
+function draw(){
+  background('#fff5f8');
+  
+  const ctx = drawingContext;
+  const pulse = 1 + 0.05 * Math.sin(t*3);
+  const scaleH = 9.5 * pulse;          // «размер» сердечка
+  
+  push();
+  translate(width/2, height/2 - 80);   // чуть выше центра
+  
+  /* ---------- клип и изображение ---------- */
+  ctx.save();                          // сохраняем состояние канвы
+  heartPath(ctx, scaleH);              // рисуем контур
+  ctx.clip();                          // всё дальше — внутри сердца
+  
+  // рисуем фото, подстраивая его под ширину сердца (~32 * scaleH px)
+  const w = scaleH * 32;
+  imageMode(CENTER);
+  image(momImg, 0, 0, w, w);           // квадратной обрезки обычно хватает
+  ctx.restore();                       // возвращаем обычный режим
+  
+  /* ---------- обводка сердца ---------- */
+  noFill();
+  strokeWeight(4);
+  stroke(lerpColor(color('#ff5fa2'), color('#ffbf00'), (Math.sin(t)+1)/2));
+  beginShape();
+  heartPath(ctx, scaleH);              // используем тот же путь
+  endShape();
+  pop();
+  
+  /* ---------- подпись ---------- */
+  fill('#d81b60'); noStroke();
+  textFont('Yeseva One'); textSize(26);
+  text('С Днём матери,\nмамочка!\nЯ тебя люблю 💖\nЭто сердечко для тебя от Муси',
+       width/2, height/2 + 160);
+  
+  t += 0.02;
+}
+</script>
+</body>
+</html>
